@@ -1,0 +1,14 @@
+node_modules
+.DS_Store
+dist
+dist-ssr
+*.local
+.gemini
+.agent
+.agents
+_agent
+_agents
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+bun.lockb
