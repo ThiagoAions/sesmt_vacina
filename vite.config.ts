@@ -8,6 +8,15 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  server: {
+    proxy: {
+      '/monday-api': {
+        target: 'https://api.monday.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/monday-api/, ''),
+      },
+    },
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

@@ -1,0 +1,32 @@
+<svg width="200" height="280" viewBox="0 0 200 280" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Body/Head (Drop Shape) -->
+  <path d="M100 20C70 80 40 120 40 180C40 215 66.8629 240 100 240C133.137 240 160 215 160 180C160 120 130 80 100 20Z" fill="white" stroke="#E2E8F0" stroke-width="1"/>
+  
+  <!-- Eyes -->
+  <circle cx="80" cy="140" r="6" fill="#1A202C"/>
+  <circle cx="120" cy="140" r="6" fill="#1A202C"/>
+  <path d="M75 130C75 130 80 125 85 130" stroke="#1A202C" stroke-width="1.5" stroke-linecap="round"/>
+  <path d="M115 130C115 130 120 125 125 130" stroke="#1A202C" stroke-width="1.5" stroke-linecap="round"/>
+  
+  <!-- Mouth -->
+  <path d="M75 165C75 165 100 185 125 165" stroke="#E53E3E" stroke-width="3" stroke-linecap="round" fill="none"/>
+  
+  <!-- Thumbs Up Hand (Simplified) -->
+  <path d="M165 160C175 160 180 150 180 140C180 130 175 125 165 125" stroke="#E2E8F0" stroke-width="2" fill="white"/>
+  <path d="M172 125V110C172 105 178 105 178 110V125" stroke="#E2E8F0" stroke-width="2" fill="white"/> <!-- Thumb -->
+  
+  <!-- SUS Logo (Simplified Cross) -->
+  <rect x="94" y="195" width="12" height="12" fill="#005CAB"/>
+  <rect x="90" y="199" width="20" height="4" fill="#005CAB"/>
+  <rect x="98" y="191" width="4" height="20" fill="#005CAB"/>
+  <text x="100" y="218" text-anchor="middle" font-family="Arial" font-size="8" font-weight="bold" fill="#005CAB">SUS</text>
+  
+  <!-- Shadow overlay for 3D effect -->
+  <defs>
+    <radialGradient id="grad1" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+      <stop offset="0%" style="stop-color:rgb(255,255,255);stop-opacity:0" />
+      <stop offset="100%" style="stop-color:rgb(0,0,0);stop-opacity:0.05" />
+    </radialGradient>
+  </defs>
+  <path d="M100 20C70 80 40 120 40 180C40 215 66.8629 240 100 240C133.137 240 160 215 160 180C160 120 130 80 100 20Z" fill="url(#grad1)"/>
+</svg>

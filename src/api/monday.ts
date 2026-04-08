@@ -2,7 +2,7 @@ import type { Colaborador, VacinacaoItem, MondayItem, DashboardStats } from '@/t
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
-const API_URL = 'https://api.monday.com/v2'
+const API_URL = '/monday-api/v2'
 const TOKEN =
   'eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjYzNDI0NzA0MSwiYWFpIjoxMSwidWlkIjoxMDA5ODMxNjIsImlhZCI6IjIwMjYtMDMtMTdUMTU6NTE6MjcuMDAwWiIsInBlciI6Im1lOndyaXRlIiwiYWN0aWQiOjEyNjg1MDA2LCJyZ24iOiJ1c2UxIn0.DF_TG5r-L5NLJfGTrpILjjtsLEUy_aJABsly0eEPXV0'
 
@@ -47,12 +47,8 @@ async function mondayGQL<T = unknown>(
   return json.data as T
 }
 
-// ─── Board 1: Fetch Colaboradores ─────────────────────────────────────────────
+// ─── Board 1: Fetch Colaboradores (O Alimentador) ─────────────────────────────────────────────
 
-/**
- * Fetches all items from Board 1 and maps them to Colaborador objects.
- * Column IDs are discovered dynamically by looking for partial matches.
- */
 export async function fetchColaboradores(): Promise<Colaborador[]> {
   const query = `
     query GetColaboradores($boardId: ID!) {
@@ -64,6 +60,9 @@ export async function fetchColaboradores(): Promise<Colaborador[]> {
             column_values {
               id
               text
+              column {
+                title
+              }
             }
           }
         }
@@ -81,13 +80,15 @@ export async function fetchColaboradores(): Promise<Colaborador[]> {
   return items
     .filter((i) => i.name.trim() !== '')
     .map((item) => {
-      // Use flexible matching since column IDs can vary
-      const get = (patterns: string[]) => {
-        for (const p of patterns) {
-          const cv = item.column_values.find(
-            (c) => c.id === p || c.id.toLowerCase().includes(p.toLowerCase()),
-          )
-          if (cv?.text) return cv.text
+      // Função inteligente: Busca pelo ID exato ou pelo título da coluna
+      const get = (idsExatos: string[], titulos: string[]) => {
+        for (const cv of item.column_values) {
+          if (
+            idsExatos.includes(cv.id) || 
+            (cv.column?.title && titulos.some(t => cv.column!.title.toLowerCase().includes(t.toLowerCase())))
+          ) {
+            if (cv.text) return cv.text
+          }
         }
         return ''
       }
@@ -95,8 +96,10 @@ export async function fetchColaboradores(): Promise<Colaborador[]> {
       return {
         id: item.id,
         name: item.name,
-        contrato: get(['contrato', 'contract', 'text']),
-        unidade: get(['unidade', 'unit', 'text0', 'text1']),
+        // Usa o ID 'department' do quadro antigo
+        contrato: get(['department'], ['contrato', 'tipo de contrato']),
+        // Usa o ID 'dropdown_mkztj8wp' (CETAM) e continua varrendo as outras unidades (SEMSA, SEDUC, etc.)
+        unidade: get(['dropdown_mkztj8wp'], ['cetam', 'semsa', 'escola', 'interior', 'detran', 'coorde', 'unidade não listada', 'un. n', 'unidade']),
       }
     })
 }
@@ -124,7 +127,7 @@ export async function fetchVacinacoes(): Promise<VacinacaoItem[]> {
 
   const data = await mondayGQL<{
     boards: [{ items_page: { items: Array<MondayItem & { created_at: string }> } }]
-  }>(query, { boardId: BOARD_DESTINO })
+  }>(query, { boardId: BOARD_DESTINO }) // Uses BOARD_DESTINO constant
 
   const items = data?.boards?.[0]?.items_page?.items ?? []
 
@@ -141,12 +144,14 @@ export async function fetchVacinacoes(): Promise<VacinacaoItem[]> {
       id: item.id,
       colaboradorName: item.name,
       colaboradorId: '',
-      contrato: get(['text', 'contrato']),
-      unidade: get(['text0', 'unidade']),
-      area: (get(['text1', 'area']).toUpperCase() as 'PONTA' | 'ADM') || 'PONTA',
-      statusH1N1: (get(['status', 'h1n1']) || 'Pendente') as VacinacaoItem['statusH1N1'],
-      status1Dose: (get(['status4', '1dose', 'dose1']) || 'Pendente') as VacinacaoItem['status1Dose'],
-      status2Dose: (get(['status5', '2dose', 'dose2']) || 'Pendente') as VacinacaoItem['status2Dose'],
+      // Colocamos os IDs novos na lista de busca:
+      contrato: get(['text_mm278rts', 'text', 'contrato']),
+      unidade: get(['text_mm27t2ky', 'text0', 'unidade']),
+      area: (get(['color_mm27z9q9', 'text1', 'area']).toUpperCase() as 'PONTA' | 'ADM') || 'PONTA',
+      statusH1N1: (get(['color_mm27vwvb', 'status', 'h1n1']) || 'Não tomou') as VacinacaoItem['statusH1N1'],
+      status1Dose: (get(['color_mm275ygv', 'status4', '1dose', 'dose1']) || 'Não tomou') as VacinacaoItem['status1Dose'],
+      status2Dose: (get(['color_mm27ya8f', 'status5', '2dose', 'dose2']) || 'Não tomou') as VacinacaoItem['status2Dose'],
+      observacao: get(['text2', 'obs']),
       createdAt: item.created_at ?? '',
     }
   })
@@ -164,14 +169,14 @@ export function computeStats(items: VacinacaoItem[]): DashboardStats {
   let pontaRegulares = 0
 
   for (const v of items) {
-    if (v.statusH1N1 !== 'Vacinado') semH1N1++
-    if (v.status1Dose === 'Atrasado') atrasados1Dose++
-    if (v.status2Dose === 'Atrasado') atrasados2Dose++
+    if (v.statusH1N1 !== 'Em dia') semH1N1++
+    if (v.status1Dose === 'Atrasada') atrasados1Dose++
+    if (v.status2Dose === 'Atrasada') atrasados2Dose++
 
     const regular =
-      v.statusH1N1 === 'Vacinado' &&
-      v.status1Dose === 'Vacinado' &&
-      v.status2Dose === 'Vacinado'
+      v.statusH1N1 === 'Em dia' &&
+      v.status1Dose === 'Em dia' &&
+      v.status2Dose === 'Em dia'
 
     if (v.area === 'ADM') {
       admTotal++
@@ -198,29 +203,36 @@ export function computeStats(items: VacinacaoItem[]): DashboardStats {
 
 interface CreateItemPayload {
   colaboradorName: string
-  colaboradorId: string   // Board 1 item ID for Connect Boards
+  colaboradorId: string   // ID da pessoa no Board 1 (Atestados)
   contrato: string
   unidade: string
   area: string
   statusH1N1: string
   status1Dose: string
   status2Dose: string
+  observacao: string
 }
 
 export async function criarVacinacao(payload: CreateItemPayload): Promise<string> {
   const columnValues: Record<string, unknown> = {
-    // Status columns — use label objects
-    status:  { label: payload.statusH1N1 },
-    status4: { label: payload.status1Dose },
-    status5: { label: payload.status2Dose },
-    // Text columns
-    text:  payload.contrato,
-    text0: payload.unidade,
-    text1: payload.area,
-    // Connect Boards — link to colaborador item on Board 1
-    connect_boards: {
-      item_ids: [parseInt(payload.colaboradorId, 10)].filter(Boolean),
-    },
+    // Colunas de Texto
+    "text_mm278rts":  payload.contrato,     // Contrato
+    "text_mm27t2ky":  payload.unidade,      // Unidade
+    "ID_DA_OBSERVACAO": payload.observacao, // ⚠️ SUBSTITUA PELO ID REAL DA COLUNA DE OBSERVAÇÃO
+
+    // Colunas de Status
+    "color_mm27z9q9": { label: payload.area },        // Área (PONTA / ADM)
+    "color_mm27vwvb": { label: payload.statusH1N1 },  // H1N1
+    "color_mm275ygv": { label: payload.status1Dose }, // 1ª Dose
+    "color_mm27ya8f": { label: payload.status2Dose }, // 2ª Dose
+  }
+
+  // Linkando a vacina com a ficha de atestado do funcionário (se a coluna existir)
+  if (payload.colaboradorId) {
+    // Caso crie a coluna Connect Boards no futuro, substitua "connect_boards" pelo ID real dela
+    columnValues["connect_boards"] = {
+      item_ids: [parseInt(payload.colaboradorId, 10)].filter(Boolean)
+    }
   }
 
   const mutation = `
@@ -237,12 +249,50 @@ export async function criarVacinacao(payload: CreateItemPayload): Promise<string
   `
 
   const data = await mondayGQL<{ create_item: { id: string } }>(mutation, {
-    boardId: BOARD_DESTINO,
+    boardId: '18407626532', // Board Novo de Vacinas
     itemName: payload.colaboradorName,
     columnValues: JSON.stringify(columnValues),
   })
 
   return data?.create_item?.id ?? ''
+}
+
+// ─── Board 2: Atualizar Vacinação Existente (Edição Rápida) ────────────────────
+
+interface UpdateVacinacaoPayload {
+  itemId: string
+  area: string
+  statusH1N1: string
+  status1Dose: string
+  status2Dose: string
+}
+
+export async function atualizarVacinacao(payload: UpdateVacinacaoPayload): Promise<void> {
+  const columnValues = {
+    // Usando os IDs reais confirmados
+    'color_mm27z9q9': { label: payload.area },
+    'color_mm27vwvb': { label: payload.statusH1N1 },
+    'color_mm275ygv': { label: payload.status1Dose },
+    'color_mm27ya8f': { label: payload.status2Dose },
+  }
+
+  const mutation = `
+    mutation UpdateItem($boardId: ID!, $itemId: ID!, $columnValues: JSON!) {
+      change_multiple_column_values(
+        board_id: $boardId
+        item_id: $itemId
+        column_values: $columnValues
+      ) {
+        id
+      }
+    }
+  `
+
+  await mondayGQL(mutation, {
+    boardId: BOARD_DESTINO,
+    itemId: payload.itemId,
+    columnValues: JSON.stringify(columnValues),
+  })
 }
 
 // ─── Board 2: Upload File to an Item Column ───────────────────────────────────
@@ -253,19 +303,36 @@ export async function uploadFile(
   file: File,
 ): Promise<void> {
   const formData = new FormData()
-  formData.append(
-    'query',
-    `mutation ($file: File!) {
-       add_file_to_column(item_id: ${itemId}, column_id: "${columnId}", file: $file) {
-         id
-       }
-     }`,
-  )
-  formData.append('variables[file]', file, file.name)
 
-  await fetch(`${API_URL}/file`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${TOKEN}` },
-    body: formData,
-  })
+  // 1. Query compacta
+  formData.append('query', `mutation ($file: File!) { add_file_to_column(item_id: ${itemId}, column_id: "${columnId}", file: $file) { id } }`)
+
+  // 2. Variáveis vazias
+  formData.append('variables', JSON.stringify({ file: null }))
+
+  // 3. Mapa numérico (Padrão Apollo mais robusto)
+  formData.append('map', JSON.stringify({ '0': ['variables.file'] }))
+
+  // 4. O arquivo entra com a chave '0' para bater com o mapa
+  formData.append('0', file, file.name)
+
+  try {
+    const res = await fetch(`${API_URL}/file`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${TOKEN}`
+      },
+      body: formData,
+    })
+
+    const data = await res.json()
+
+    if (data.errors && data.errors.length > 0) {
+      alert(`O Monday recusou o arquivo na coluna ${columnId}: ${data.errors[0].message}`)
+    }
+
+  } catch (err) {
+    console.error('Erro detalhado:', err)
+    alert(`Bloqueio de rede na coluna ${columnId}. \n\n⚠️ DICA: Tente desativar extensões de bloqueio de anúncio (AdBlock) ou tente em uma aba anônima.`)
+  }
 }

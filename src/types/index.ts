@@ -4,6 +4,7 @@ export interface MondayColumnValue {
   id: string
   text: string
   value: string
+  column?: { title: string }
 }
 
 export interface MondayItem {
@@ -23,7 +24,7 @@ export interface Colaborador {
 
 export type VacinacaoArea = 'PONTA' | 'ADM'
 
-export type VacinaStatus = 'Vacinado' | 'Pendente' | 'Atrasado' | 'Recusado'
+export type VacinaStatus = 'Em dia' | 'Atrasada' | 'Não tomou'
 
 export interface VacinacaoItem {
   id: string
@@ -35,6 +36,7 @@ export interface VacinacaoItem {
   statusH1N1: VacinaStatus
   status1Dose: VacinaStatus
   status2Dose: VacinaStatus
+  observacao: string
   createdAt: string
 }
 
@@ -46,6 +48,7 @@ export interface FormVacinacaoState {
   contrato: string
   contratoCustom: string   // when "Outro" is selected
   unidade: string
+  observacao: string
   statusH1N1: string
   status1Dose: string
   status2Dose: string

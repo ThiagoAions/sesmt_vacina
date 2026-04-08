@@ -1,12 +1,11 @@
 type Status = string
 
 const MAP: Record<string, { bg: string; color: string }> = {
-  Vacinado:   { bg: 'rgba(0,230,118,.12)',  color: 'var(--green)'  },
-  Pendente:   { bg: 'rgba(245,158,11,.12)', color: 'var(--yellow)' },
-  Atrasado:   { bg: 'rgba(239,68,68,.12)',  color: 'var(--red)'    },
-  Recusado:   { bg: 'rgba(167,139,250,.12)',color: 'var(--purple)' },
-  ADM:        { bg: 'rgba(167,139,250,.12)',color: 'var(--purple)' },
-  PONTA:      { bg: 'rgba(0,229,255,.12)',  color: 'var(--cyan)'   },
+  'Em dia':    { bg: 'rgba(0,230,118,.12)',  color: 'var(--green)'  },
+  'Atrasada':  { bg: 'rgba(245,158,11,.12)', color: 'var(--yellow)' },
+  'Não tomou': { bg: 'rgba(239,68,68,.12)',  color: 'var(--red)'    },
+  ADM:         { bg: 'rgba(167,139,250,.12)',color: 'var(--purple)' },
+  PONTA:       { bg: 'rgba(0,229,255,.12)',  color: 'var(--cyan)'   },
 }
 
 export function StatusBadge({ status }: { status: Status }) {
