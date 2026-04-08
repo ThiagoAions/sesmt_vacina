@@ -213,7 +213,7 @@ export function VacinacaoForm({ area }: Props) {
       <Header title={`Formulário ${area}`} subtitle={`Registro de vacinação — Área ${area}`} />
 
       <form onSubmit={handleSubmit} noValidate>
-        <div style={{ padding: 28, display: 'grid', gridTemplateColumns: '1fr 340px', gap: 20, alignItems: 'start' }}>
+        <div className="form-layout">
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <div style={cardStyle}>
@@ -288,7 +288,7 @@ export function VacinacaoForm({ area }: Props) {
                   </AnimatePresence>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <div className="grid-2">
                   <Select
                     label="Contrato *"
                     placeholder="Selecione ou 'Outro'"
@@ -380,7 +380,7 @@ export function VacinacaoForm({ area }: Props) {
 
             <div style={cardStyle}>
               {sectionTitle('Status das Vacinas')}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+              <div className="grid-3">
                 <Select label="H1N1 *" placeholder="Status" value={form.statusH1N1} onChange={(e) => set('statusH1N1', e.target.value)} error={errors.statusH1N1} options={STATUS_OPTIONS} />
                 <Select label="1ª Dose *" placeholder="Status" value={form.status1Dose} onChange={(e) => set('status1Dose', e.target.value)} error={errors.status1Dose} options={STATUS_OPTIONS} />
                 <Select label="2ª Dose *" placeholder="Status" value={form.status2Dose} onChange={(e) => set('status2Dose', e.target.value)} error={errors.status2Dose} options={STATUS_OPTIONS} />
@@ -389,7 +389,7 @@ export function VacinacaoForm({ area }: Props) {
 
             <div style={cardStyle}>
               {sectionTitle('Comprovantes')}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+              <div className="grid-2">
                 <FileDropzone label="📷 Foto do Cartão Físico *" accept="image/*" file={form.arquivoFisico} onChange={(f) => set('arquivoFisico', f)} error={errors.arquivoFisico} />
                 <FileDropzone label="📄 Cartão Digital (PDF) *" accept=".pdf" file={form.arquivoDigital} onChange={(f) => set('arquivoDigital', f)} error={errors.arquivoDigital} />
               </div>

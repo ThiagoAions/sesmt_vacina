@@ -1,4 +1,6 @@
-import { RefreshCw, Bell } from 'lucide-react'
+import { RefreshCw, Bell, Menu } from 'lucide-react'
+import { useContext } from 'react'
+import { SidebarContext } from './AppLayout'
 
 interface HeaderProps {
   title: string
@@ -7,6 +9,8 @@ interface HeaderProps {
 }
 
 export function Header({ title, subtitle, onRefresh }: HeaderProps) {
+  const { toggle } = useContext(SidebarContext)
+
   const iconBtn: React.CSSProperties = {
     background: 'rgba(255,255,255,.04)',
     border: '1px solid var(--border-subtle)',
@@ -16,7 +20,7 @@ export function Header({ title, subtitle, onRefresh }: HeaderProps) {
   }
 
   return (
-    <header style={{
+    <header className="header-padding" style={{
       height: 68,
       background: 'rgba(14,18,20,.88)',
       backdropFilter: 'blur(14px)',
@@ -24,13 +28,23 @@ export function Header({ title, subtitle, onRefresh }: HeaderProps) {
       display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       padding: '0 28px', position: 'sticky', top: 0, zIndex: 30,
     }}>
-      <div>
-        <h1 style={{ fontSize: 20, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.2 }}>
-          {title}
-        </h1>
-        {subtitle && (
-          <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{subtitle}</p>
-        )}
+      <div className="header-title-box" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        {/* Botão de Menu (Só aparece no mobile via CSS) */}
+        <button 
+          className="mobile-menu-btn" 
+          onClick={toggle} 
+          style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}
+        >
+          <Menu size={22} />
+        </button>
+        <div>
+          <h1 style={{ fontSize: 20, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.2 }}>
+            {title}
+          </h1>
+          {subtitle && (
+            <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{subtitle}</p>
+          )}
+        </div>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

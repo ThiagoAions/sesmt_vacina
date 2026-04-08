@@ -327,7 +327,7 @@ export function DashboardPage() {
         onRefresh={refetch}
       />
 
-      <div style={{ padding: 28, display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div className="content-padding" style={{ display: 'flex', flexDirection: 'column', gap: 24, padding: 28 }}>
         {error && (
           <div style={{
             padding: '12px 16px', background: 'rgba(239,68,68,.08)',
@@ -347,7 +347,7 @@ export function DashboardPage() {
         </section>
 
         {/* Charts Row */}
-        <section style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <section className="charts-grid">
           <H1N1Chart stats={stats} loading={loading} />
           <DoseChart stats={stats} loading={loading} />
         </section>
@@ -407,7 +407,7 @@ export function DashboardPage() {
             </div>
 
             {/* BARRA DE PESQUISA E SELECTS CUSTOMIZADOS */}
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1.2fr 2fr auto', gap: 12 }}>
+            <div className="filters-grid">
               <div style={{ position: 'relative' }}>
                 <Search size={14} color="var(--text-secondary)" style={{ position: 'absolute', top: 11, left: 12 }} />
                 <input
