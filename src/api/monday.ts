@@ -143,15 +143,14 @@ export async function fetchVacinacoes(): Promise<VacinacaoItem[]> {
     return {
       id: item.id,
       colaboradorName: item.name,
-      colaboradorId: '',
-      // Colocamos os IDs novos na lista de busca:
+      cargo: get(['color_mm28bfj4', 'cargo', 'função']), // Mapper para o novo campo de cargo
       contrato: get(['text_mm278rts', 'text', 'contrato']),
       unidade: get(['text_mm27t2ky', 'text0', 'unidade']),
       area: (get(['color_mm27z9q9', 'text1', 'area']).toUpperCase() as 'PONTA' | 'ADM') || 'PONTA',
       statusH1N1: (get(['color_mm27vwvb', 'status', 'h1n1']) || 'Não tomou') as VacinacaoItem['statusH1N1'],
       status1Dose: (get(['color_mm275ygv', 'status4', '1dose', 'dose1']) || 'Não tomou') as VacinacaoItem['status1Dose'],
       status2Dose: (get(['color_mm27ya8f', 'status5', '2dose', 'dose2']) || 'Não tomou') as VacinacaoItem['status2Dose'],
-      observacao: get(['text2', 'obs']),
+      observacao: get(['text2', 'obs', 'ID_DA_OBSERVACAO']),
       createdAt: item.created_at ?? '',
     }
   })
@@ -199,49 +198,36 @@ export function computeStats(items: VacinacaoItem[]): DashboardStats {
   }
 }
 
-// ─── Board 2: Create Vacinação Item (Mutation) ────────────────────────────────
+// ─── Board 2: Create Vacinação Item (Auto-Cadastro) ──────────────────────────
 
 interface CreateItemPayload {
   colaboradorName: string
-  colaboradorId: string   // ID da pessoa no Board 1 (Atestados)
+  cargo: string
   contrato: string
   unidade: string
   area: string
-  statusH1N1: string
-  status1Dose: string
-  status2Dose: string
   observacao: string
 }
 
 export async function criarVacinacao(payload: CreateItemPayload): Promise<string> {
   const columnValues: Record<string, unknown> = {
-    // Colunas de Texto
-    "text_mm278rts":  payload.contrato,     // Contrato
-    "text_mm27t2ky":  payload.unidade,      // Unidade
-    "ID_DA_OBSERVACAO": payload.observacao, // ⚠️ SUBSTITUA PELO ID REAL DA COLUNA DE OBSERVAÇÃO
-
-    // Colunas de Status
-    "color_mm27z9q9": { label: payload.area },        // Área (PONTA / ADM)
-    "color_mm27vwvb": { label: payload.statusH1N1 },  // H1N1
-    "color_mm275ygv": { label: payload.status1Dose }, // 1ª Dose
-    "color_mm27ya8f": { label: payload.status2Dose }, // 2ª Dose
+    "text_mm278rts":  payload.contrato,     // Coluna Contrato
+    "text_mm27t2ky":  payload.unidade,      // Coluna Unidade
+    "color_mm28bfj4": { label: payload.cargo }, // Coluna Cargo/Função (Status/Dropdown)
+    "ID_DA_OBSERVACAO": payload.observacao, // ID Real da Observação a definir
+    "color_mm27z9q9": { label: payload.area }, // Coluna Área (PONTA / ADM)
   }
 
-  // Linkando a vacina com a ficha de atestado do funcionário (se a coluna existir)
-  if (payload.colaboradorId) {
-    // Caso crie a coluna Connect Boards no futuro, substitua "connect_boards" pelo ID real dela
-    columnValues["connect_boards"] = {
-      item_ids: [parseInt(payload.colaboradorId, 10)].filter(Boolean)
-    }
-  }
+  // Direciona para o grupo ADM ou para o grupo geral (Ponta/Topics)
+  const groupId = payload.area === 'ADM' ? 'group_mm27g4y9' : 'topics'
 
   const mutation = `
-    mutation CreateItem($boardId: ID!, $itemName: String!, $columnValues: JSON!) {
+    mutation CreateItem($boardId: ID!, $groupId: String!, $itemName: String!, $columnValues: JSON!) {
       create_item(
         board_id: $boardId
+        group_id: $groupId
         item_name: $itemName
         column_values: $columnValues
-        create_labels_if_missing: true
       ) {
         id
       }
@@ -249,8 +235,9 @@ export async function criarVacinacao(payload: CreateItemPayload): Promise<string
   `
 
   const data = await mondayGQL<{ create_item: { id: string } }>(mutation, {
-    boardId: '18407626532', // Board Novo de Vacinas
-    itemName: payload.colaboradorName,
+    boardId: BOARD_DESTINO,
+    groupId: groupId,
+    itemName: payload.colaboradorName, 
     columnValues: JSON.stringify(columnValues),
   })
 

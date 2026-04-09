@@ -29,7 +29,7 @@ export type VacinaStatus = 'Em dia' | 'Atrasada' | 'Não tomou'
 export interface VacinacaoItem {
   id: string
   colaboradorName: string
-  colaboradorId: string   // linked board item id (Board 1)
+  cargo: string           // NOVO
   contrato: string
   unidade: string
   area: VacinacaoArea
@@ -38,20 +38,20 @@ export interface VacinacaoItem {
   status2Dose: VacinaStatus
   observacao: string
   createdAt: string
+  // Nota: Os status das vacinas saíram do formulário de cadastro, 
+  // mas permanecem aqui para que o Dashboard continue exibindo os dados do Monday.
 }
 
 // ─── Form State ───────────────────────────────────────────────────────────────
 
 export interface FormVacinacaoState {
-  colaboradorId: string
-  colaboradorName: string
+  colaboradorName: string  // Agora é texto livre
+  cargo: string            // NOVO
   contrato: string
-  contratoCustom: string   // when "Outro" is selected
+  contratoCustom: string   
   unidade: string
+  area: string             // 'PONTA' ou 'ADM'
   observacao: string
-  statusH1N1: string
-  status1Dose: string
-  status2Dose: string
   arquivoFisico: File | null
   arquivoDigital: File | null
 }
