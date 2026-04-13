@@ -9,45 +9,42 @@ interface KPICardProps {
   trend?: string
   trendUp?: boolean
   loading?: boolean
+  onClick?: () => void
+  isActive?: boolean
 }
 
-export function KPICard({ label, value, icon: Icon, color = 'var(--cyan)', trend, trendUp, loading }: KPICardProps) {
+export function KPICard({ label, value, icon: Icon, color = 'var(--cyan)', trend, trendUp, loading, onClick, isActive }: KPICardProps) {
   return (
     <motion.div
+      onClick={onClick}
+      whileHover={onClick ? { scale: 1.02 } : {}}
+      whileTap={onClick ? { scale: 0.98 } : {}}
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
       style={{
-        background: 'var(--bg-card)', backdropFilter: 'blur(12px)',
-        border: '1px solid var(--border-subtle)', borderRadius: 14,
-        padding: '20px 22px', display: 'flex', alignItems: 'flex-start', gap: 16,
+        background: isActive ? 'rgba(255,255,255,0.08)' : 'var(--bg-card)', 
+        backdropFilter: 'blur(12px)',
+        cursor: onClick ? 'pointer' : 'default',
+        border: isActive ? `1px solid ${color}` : '1px solid var(--border-subtle)', 
+        borderRadius: 14,
+        padding: '20px 22px',
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 16,
+        boxShadow: isActive ? `0 0 20px ${color}15` : 'none',
+        transition: 'border 0.2s, background 0.2s'
       }}
     >
-      <div style={{
-        width: 44, height: 44, borderRadius: 11, flexShrink: 0,
-        background: `${color}18`, border: `1px solid ${color}30`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        boxShadow: `0 0 16px ${color}14`,
-      }}>
+      <div style={{ width: 44, height: 44, borderRadius: 11, flexShrink: 0, background: `${color}18`, border: `1px solid ${color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 16px ${color}14` }}>
         <Icon size={20} color={color} />
       </div>
-
       <div style={{ flex: 1 }}>
-        <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.8px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-          {label}
-        </p>
-        {loading ? (
-          <div style={{ height: 28, width: 60, background: 'rgba(255,255,255,.06)', borderRadius: 6, marginTop: 6, animation: 'pulse 1.4s ease-in-out infinite' }} />
-        ) : (
-          <h3 style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-primary)', marginTop: 4, fontVariantNumeric: 'tabular-nums', letterSpacing: '-1px' }}>
-            {value}
-          </h3>
+        <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '.8px', textTransform: 'uppercase', color: 'var(--text-muted)' }}>{label}</p>
+        {loading ? ( <div style={{ height: 28, width: 60, background: 'rgba(255,255,255,.06)', borderRadius: 6, marginTop: 6, animation: 'pulse 1.4s ease-in-out infinite' }} /> ) : (
+          <h3 style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-primary)', marginTop: 4, fontVariantNumeric: 'tabular-nums', letterSpacing: '-1px' }}>{value}</h3>
         )}
-        {trend && (
-          <p style={{ fontSize: 11, marginTop: 5, color: trendUp ? 'var(--green)' : 'var(--red)' }}>
-            {trendUp ? '↑' : '↓'} {trend}
-          </p>
-        )}
+        {trend && ( <p style={{ fontSize: 11, marginTop: 5, color: trendUp ? 'var(--green)' : 'var(--red)' }}>{trendUp ? '↑' : '↓'} {trend}</p> )}
       </div>
     </motion.div>
   )

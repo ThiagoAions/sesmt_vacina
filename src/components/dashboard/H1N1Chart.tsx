@@ -8,8 +8,8 @@ const COLORS = ['#EF4444', '#00E5FF']
 export function H1N1Chart({ stats, loading }: Props) {
   const data = stats
     ? [
-        { name: 'Sem H1N1', value: stats.semH1N1 },
-        { name: 'Com H1N1', value: stats.total - stats.semH1N1 },
+        { name: 'Sem H1N1', value: stats.atrasoH1N1 },
+        { name: 'Com H1N1', value: stats.total - stats.atrasoH1N1 },
       ]
     : []
 

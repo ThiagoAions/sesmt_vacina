@@ -98,9 +98,9 @@
 }
 
 .filters-grid {
-  display: grid;
-  grid-template-columns: 2fr 1.2fr 1.2fr 2fr auto;
-  gap: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
   align-items: center;
 }
 
@@ -108,11 +108,32 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
-  margin-bottom: 28px;
+  margin-bottom: 0;
 }
 
 .mobile-menu-btn {
   display: none !important;
+}
+
+/* ─── PUBLIC FORM LAYOUT ─── */
+.public-form-layout {
+  padding: 20px;
+  max-width: 900px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 24px;
+  align-items: start;
+}
+
+.form-sidebar-column {
+  display: block;
+}
+
+.form-mobile-instructions {
+  display: none;
+  flex-direction: column;
+  gap: 16px;
 }
 
 /* REGRAS PARA O TELEMÓVEL */
@@ -144,4 +165,35 @@
   
   .header-title-box h1 { font-size: 16px !important; }
   .header-title-box p { font-size: 10px !important; }
+
+  /* Public form mobile */
+  .public-form-layout {
+    grid-template-columns: 1fr;
+    padding: 16px;
+    gap: 16px;
+  }
+  .form-sidebar-column {
+    display: none;
+  }
+  .form-mobile-instructions {
+    display: flex;
+  }
+}
+
+/* ─── TEMA CLARO (LIGHT MODE) ─── */
+body.light-theme {
+  --bg-page: #F0F2F5;
+  --bg-sidebar: #FFFFFF;
+  --bg-card: rgba(255, 255, 255, 0.98);
+  --bg-input: rgba(0, 0, 0, 0.04);
+  --bg-tooltip: #FFFFFF;
+
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --border-input: rgba(0, 0, 0, 0.15);
+  --border-active: var(--cyan);
+
+  --text-primary: #111827;
+  --text-secondary: #374151;
+  --text-muted: #6B7280;
+  --text-label: #4B5563;
 }

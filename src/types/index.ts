@@ -24,33 +24,40 @@ export interface Colaborador {
 
 export type VacinacaoArea = 'PONTA' | 'ADM'
 
-export type VacinaStatus = 'Em dia' | 'Atrasada' | 'Não tomou'
+export type VacinaStatus = 'Em dia' | 'Atrasada' | 'Não tomou' | '1ª dose (Aguard. 2ª)' | '2ª Dose (Aguard. 3ª)' | '2ª Dose' | 'Aguard. Reforço (10 anos)' | 'Não se aplica' | 'Em Análise'
 
 export interface VacinacaoItem {
   id: string
+  boardId: string         // 🌟 NOVO: Guarda o ID do quadro (Ponta ou ADM)
   colaboradorName: string
-  cargo: string           // NOVO
-  contrato: string
+  dataNascimento: string  // NOVO
+  idade: number           // NOVO (Calculado no frontend)
+  cargo: string
+  contrato: string        // Guarda o Contrato (Ponta) ou o Setor (ADM)
   unidade: string
   area: VacinacaoArea
-  statusH1N1: VacinaStatus
-  status1Dose: VacinaStatus
-  status2Dose: VacinaStatus
   observacao: string
   createdAt: string
-  // Nota: Os status das vacinas saíram do formulário de cadastro, 
-  // mas permanecem aqui para que o Dashboard continue exibindo os dados do Monday.
+  statusH1N1: VacinaStatus
+  statusHerpesZoster: VacinaStatus
+  statusPneumococica: VacinaStatus
+  statusInfluenza: VacinaStatus
+  statusFebreAmarela: VacinaStatus
+  statusTripliceViral: VacinaStatus
+  statusDuplaAdulta: VacinaStatus
+  statusHepatiteB: VacinaStatus
 }
 
 // ─── Form State ───────────────────────────────────────────────────────────────
 
 export interface FormVacinacaoState {
-  colaboradorName: string  // Agora é texto livre
-  cargo: string            // NOVO
+  colaboradorName: string
+  dataNascimento: string
+  cargo: string
   contrato: string
-  contratoCustom: string   
+  contratoCustom: string
+  setor: string          // NOVO PARA O ADM
   unidade: string
-  area: string             // 'PONTA' ou 'ADM'
   observacao: string
   arquivoFisico: File | null
   arquivoDigital: File | null
@@ -60,11 +67,17 @@ export interface FormVacinacaoState {
 
 export interface DashboardStats {
   total: number
-  semH1N1: number
-  atrasados1Dose: number
-  atrasados2Dose: number
   admTotal: number
   admRegulares: number
   pontaTotal: number
   pontaRegulares: number
+  // Contadores de Atraso por Vacina:
+  atrasoH1N1: number
+  atrasoHerpesZoster: number
+  atrasoPneumococica: number
+  atrasoInfluenza: number
+  atrasoFebreAmarela: number
+  atrasoTripliceViral: number
+  atrasoDuplaAdulta: number
+  atrasoHepatiteB: number
 }

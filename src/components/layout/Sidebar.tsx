@@ -1,17 +1,19 @@
 import { NavLink } from 'react-router'
-import { LayoutDashboard, Syringe, ClipboardList, Building2 } from 'lucide-react'
+import { LayoutDashboard, Users, Settings, Building2, LogOut } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useContext } from 'react'
 import { SidebarContext } from './AppLayout'
+import { useAuth } from '@/contexts/auth'
 
 const NAV = [
   { to: '/',           label: 'Dashboard',      icon: LayoutDashboard },
-  { to: '/form/ponta', label: 'Form. Ponta',    icon: Syringe },
-  { to: '/form/adm',   label: 'Form. ADM',      icon: ClipboardList },
+  { to: '/controle',   label: 'Controle',       icon: Users },
+  { to: '/config',     label: 'Configurações', icon: Settings },
 ]
 
 export function Sidebar() {
   const { isOpen, close } = useContext(SidebarContext)
+  const { logout } = useAuth()
 
   return (
     <aside className={`sidebar-container ${isOpen ? 'open' : ''}`} style={{
@@ -56,6 +58,25 @@ export function Sidebar() {
           </NavLink>
         ))}
       </nav>
+
+      <div style={{ padding: '12px 10px' }}>
+        <button
+          onClick={logout}
+          style={{
+            width: '100%',
+            display: 'flex', alignItems: 'center', gap: 10,
+            padding: '10px 12px', borderRadius: 8,
+            background: 'transparent', border: 'none',
+            color: 'var(--red)', fontSize: 13, cursor: 'pointer',
+            transition: 'background .15s'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
+          onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+        >
+          <LogOut size={16} />
+          Sair do Sistema
+        </button>
+      </div>
 
       <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border-subtle)', fontSize: 10, color: 'var(--text-muted)' }}>
         v1.0.0 — SESMT © {new Date().getFullYear()}

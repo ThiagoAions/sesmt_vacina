@@ -1,5 +1,5 @@
 import { VacinacaoForm } from '@/components/forms/VacinacaoForm'
 
 export function FormPontaPage() {
-  return <VacinacaoForm initialArea="PONTA" />
+  return <VacinacaoForm area="PONTA" />
 }

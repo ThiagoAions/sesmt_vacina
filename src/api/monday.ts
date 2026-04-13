@@ -1,4 +1,4 @@
-import type { Colaborador, VacinacaoItem, MondayItem, DashboardStats } from '@/types'
+import type { Colaborador, VacinacaoItem, VacinaStatus, MondayItem, DashboardStats } from '@/types'
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -115,117 +115,184 @@ export async function fetchVacinacoes(): Promise<VacinacaoItem[]> {
             id
             name
             created_at
-            column_values {
-              id
-              text
-            }
+            column_values { id text }
           }
         }
       }
     }
   `
 
-  const data = await mondayGQL<{
-    boards: [{ items_page: { items: Array<MondayItem & { created_at: string }> } }]
-  }>(query, { boardId: BOARD_DESTINO }) // Uses BOARD_DESTINO constant
+  // Função auxiliar para buscar e mapear um quadro específico
+  const fetchBoard = async (boardId: string, isADM: boolean): Promise<VacinacaoItem[]> => {
+    const data = await mondayGQL<any>(query, { boardId })
+    const items = data?.boards?.[0]?.items_page?.items ?? []
 
-  const items = data?.boards?.[0]?.items_page?.items ?? []
-
-  return items.map((item) => {
-    const get = (ids: string[]) => {
-      for (const id of ids) {
-        const cv = item.column_values.find((c) => c.id === id || c.id.includes(id))
-        if (cv?.text) return cv.text
+    return items.map((item: any) => {
+      const get = (ids: string[]) => {
+        for (const id of ids) {
+          const cv = item.column_values.find((c: any) => c.id === id || c.id.includes(id))
+          if (cv?.text) return cv.text
+        }
+        return ''
       }
-      return ''
-    }
 
-    return {
-      id: item.id,
-      colaboradorName: item.name,
-      cargo: get(['color_mm28bfj4', 'cargo', 'função']), // Mapper para o novo campo de cargo
-      contrato: get(['text_mm278rts', 'text', 'contrato']),
-      unidade: get(['text_mm27t2ky', 'text0', 'unidade']),
-      area: (get(['color_mm27z9q9', 'text1', 'area']).toUpperCase() as 'PONTA' | 'ADM') || 'PONTA',
-      statusH1N1: (get(['color_mm27vwvb', 'status', 'h1n1']) || 'Não tomou') as VacinacaoItem['statusH1N1'],
-      status1Dose: (get(['color_mm275ygv', 'status4', '1dose', 'dose1']) || 'Não tomou') as VacinacaoItem['status1Dose'],
-      status2Dose: (get(['color_mm27ya8f', 'status5', '2dose', 'dose2']) || 'Não tomou') as VacinacaoItem['status2Dose'],
-      observacao: get(['text2', 'obs', 'ID_DA_OBSERVACAO']),
-      createdAt: item.created_at ?? '',
-    }
-  })
+      return {
+        id: item.id,
+        boardId: boardId, // Guarda a origem!
+        colaboradorName: item.name,
+        dataNascimento: isADM ? get(['date_mm29vgra']) : get(['date_mm298tyx']),
+        idade: calcularIdade(isADM ? get(['date_mm29vgra']) : get(['date_mm298tyx'])),
+        // Em Ponta o cargo é color_mm28bfj4, em ADM é text_mm29scra
+        cargo: get(['color_mm28bfj4', 'text_mm29scra']),
+        // No ADM pega do Setor (text_mm29c7sc), na Ponta pega do Contrato (text_mm278rts)
+        contrato: isADM ? get(['text_mm29c7sc']) : get(['text_mm278rts']),
+        unidade: get(['text_mm27t2ky']),
+        area: isADM ? 'ADM' : 'PONTA',
+        observacao: get(['text_mm275362']),
+        createdAt: item.created_at ?? '',
+        statusH1N1: (get(['color_mm29hmf8']) || 'Em Análise') as VacinaStatus,
+        statusHerpesZoster: (get(['color_mm29tzqy']) || 'Em Análise') as VacinaStatus,
+        statusPneumococica: (get(['color_mm28nke8']) || 'Em Análise') as VacinaStatus,
+        statusInfluenza: (get(['color_mm28cy7n']) || 'Em Análise') as VacinaStatus,
+        statusFebreAmarela: (get(['color_mm28crnh']) || 'Em Análise') as VacinaStatus,
+        statusTripliceViral: (get(['color_mm28mr83']) || 'Em Análise') as VacinaStatus,
+        statusDuplaAdulta: (get(['color_mm287sya']) || 'Em Análise') as VacinaStatus,
+        statusHepatiteB: (get(['color_mm28vybv']) || 'Em Análise') as VacinaStatus,
+      }
+    })
+  }
+
+  // Faz as duas requisições em paralelo para ser super rápido!
+  const [ponta, adm] = await Promise.all([
+    fetchBoard('18407626532', false), // ID da PONTA
+    fetchBoard('18408098438', true)   // ID do ADM
+  ])
+
+  // Junta as duas listas e ordena pela data de criação
+  return [...ponta, ...adm].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 }
 
-// ─── Board 2: Compute Stats (no extra call, reuses vacinacoes) ────────────────
+// ─── Board 2: Compute Stats ──────────────────────────────────────────────────
 
 export function computeStats(items: VacinacaoItem[]): DashboardStats {
-  let semH1N1 = 0
-  let atrasados1Dose = 0
-  let atrasados2Dose = 0
-  let admTotal = 0
-  let admRegulares = 0
-  let pontaTotal = 0
-  let pontaRegulares = 0
+  const stats: DashboardStats = {
+    total: items.length,
+    admTotal: 0, admRegulares: 0, pontaTotal: 0, pontaRegulares: 0,
+    atrasoH1N1: 0, atrasoHerpesZoster: 0, atrasoPneumococica: 0, atrasoInfluenza: 0,
+    atrasoFebreAmarela: 0, atrasoTripliceViral: 0, atrasoDuplaAdulta: 0, atrasoHepatiteB: 0
+  }
 
   for (const v of items) {
-    if (v.statusH1N1 !== 'Em dia') semH1N1++
-    if (v.status1Dose === 'Atrasada') atrasados1Dose++
-    if (v.status2Dose === 'Atrasada') atrasados2Dose++
+    if (v.statusH1N1 !== 'Em dia') stats.atrasoH1N1++
+    if (v.statusHerpesZoster !== 'Em dia') stats.atrasoHerpesZoster++
+    if (v.statusPneumococica !== 'Em dia') stats.atrasoPneumococica++
+    if (v.statusInfluenza !== 'Em dia') stats.atrasoInfluenza++
+    if (v.statusFebreAmarela !== 'Em dia') stats.atrasoFebreAmarela++
+    if (v.statusTripliceViral !== 'Em dia') stats.atrasoTripliceViral++
+    if (v.statusDuplaAdulta !== 'Em dia') stats.atrasoDuplaAdulta++
+    if (v.statusHepatiteB !== 'Em dia') stats.atrasoHepatiteB++
 
-    const regular =
-      v.statusH1N1 === 'Em dia' &&
-      v.status1Dose === 'Em dia' &&
-      v.status2Dose === 'Em dia'
+    const regular = 
+      v.statusH1N1 === 'Em dia' && v.statusHerpesZoster === 'Em dia' && 
+      v.statusPneumococica === 'Em dia' && v.statusInfluenza === 'Em dia' && 
+      v.statusFebreAmarela === 'Em dia' && v.statusTripliceViral === 'Em dia' && 
+      v.statusDuplaAdulta === 'Em dia' && v.statusHepatiteB === 'Em dia'
 
     if (v.area === 'ADM') {
-      admTotal++
-      if (regular) admRegulares++
+      stats.admTotal++
+      if (regular) stats.admRegulares++
     } else {
-      pontaTotal++
-      if (regular) pontaRegulares++
+      stats.pontaTotal++
+      if (regular) stats.pontaRegulares++
     }
   }
 
-  return {
-    total: items.length,
-    semH1N1,
-    atrasados1Dose,
-    atrasados2Dose,
-    admTotal,
-    admRegulares,
-    pontaTotal,
-    pontaRegulares,
-  }
+  return stats
 }
 
 // ─── Board 2: Create Vacinação Item (Auto-Cadastro) ──────────────────────────
 
+// Função auxiliar para calcular idade
+export function calcularIdade(dataNasc: string): number {
+  if (!dataNasc) return 0;
+  const hoje = new Date();
+  const nasc = new Date(dataNasc);
+  let idade = hoje.getFullYear() - nasc.getFullYear();
+  const m = hoje.getMonth() - nasc.getMonth();
+  if (m < 0 || (m === 0 && hoje.getDate() < nasc.getDate())) idade--;
+  return idade;
+}
+
 interface CreateItemPayload {
   colaboradorName: string
+  dataNascimento: string
   cargo: string
   contrato: string
   unidade: string
-  area: string
+  setor: string
+  area: 'PONTA' | 'ADM'
   observacao: string
 }
 
 export async function criarVacinacao(payload: CreateItemPayload): Promise<string> {
-  const columnValues: Record<string, unknown> = {
-    "text_mm278rts":  payload.contrato,     // Coluna Contrato
-    "text_mm27t2ky":  payload.unidade,      // Coluna Unidade
-    "color_mm28bfj4": { label: payload.cargo }, // Coluna Cargo/Função (Status/Dropdown)
-    "ID_DA_OBSERVACAO": payload.observacao, // ID Real da Observação a definir
-    "color_mm27z9q9": { label: payload.area }, // Coluna Área (PONTA / ADM)
+  const isADM = payload.area === 'ADM'
+  
+  // 🎯 Roteamento Mágico: Escolhe o quadro com base na Área
+  const boardId = isADM ? '18408098438' : '18407626532'
+
+  // 🧠 LÓGICA DE AUTOMAÇÃO (ADULTO SAUDÁVEL)
+  const idade = calcularIdade(payload.dataNascimento)
+  const isAdulto = idade >= 18 && idade < 60
+  
+  // Por padrão, todas as vacinas nascem como "Não tomou" para o SESMT avaliar
+  let statusPneumo = 'Não tomou'
+  let statusZoster = 'Não tomou'
+  let statusTriplice = 'Não tomou'
+
+  // SE FOR ADULTO (< 60 anos)
+  if (isAdulto) {
+    statusPneumo = 'Não se aplica'
+    statusZoster = 'Não se aplica'
+  }
+  
+  // SE FOR IDOSO (60+ anos)
+  if (!isAdulto) {
+      statusTriplice = 'Não se aplica' 
   }
 
-  // Direciona para o grupo ADM ou para o grupo geral (Ponta/Topics)
-  const groupId = payload.area === 'ADM' ? 'group_mm27g4y9' : 'topics'
+  const columnValues: Record<string, unknown> = {
+    "color_mm27z9q9": { label: payload.area },  // Área
+  }
+  
+  // Status preenchidos automaticamente conforme Idade
+  columnValues["color_mm28nke8"] = { label: statusPneumo !== 'Não tomou' ? statusPneumo : 'Em Análise' };
+  columnValues["color_mm29tzqy"] = { label: statusZoster !== 'Não tomou' ? statusZoster : 'Em Análise' };
+  columnValues["color_mm28mr83"] = { label: statusTriplice !== 'Não tomou' ? statusTriplice : 'Em Análise' };
 
+  // O resto nasce obrigatoriamente como "Em Análise" (que é a nova string adicionada no Monday pelo usuário)
+  columnValues["color_mm28vybv"] = { label: "Em Análise" };
+  columnValues["color_mm287sya"] = { label: "Em Análise" };
+  columnValues["color_mm28crnh"] = { label: "Em Análise" };
+  columnValues["color_mm28cy7n"] = { label: "Em Análise" };
+  columnValues["color_mm29hmf8"] = { label: "Em Análise" };
+
+  // Mapeamento condicional de colunas (ADM vs Ponta)
+  if (isADM) {
+    columnValues["date_mm29vgra"] = { date: payload.dataNascimento } // Data Nascimento ADM
+    columnValues["text_mm29scra"] = payload.cargo // Cargo no ADM (Texto)
+    columnValues["text_mm29c7sc"] = payload.setor // Coluna SETOR no quadro ADM
+  } else {
+    columnValues["date_mm298tyx"] = { date: payload.dataNascimento } // Data Nascimento Ponta
+    columnValues["color_mm28bfj4"] = { label: payload.cargo } // Cargo em Ponta (Color)
+    columnValues["text_mm278rts"] = payload.contrato // Coluna Contrato (Ponta)
+    columnValues["text_mm27t2ky"] = payload.unidade  // Coluna Unidade (Ponta)
+  }
+
+  // Não enviamos o group_id. Assim o Monday coloca automaticamente no grupo padrão do topo!
   const mutation = `
-    mutation CreateItem($boardId: ID!, $groupId: String!, $itemName: String!, $columnValues: JSON!) {
+    mutation CreateItem($boardId: ID!, $itemName: String!, $columnValues: JSON!) {
       create_item(
         board_id: $boardId
-        group_id: $groupId
         item_name: $itemName
         column_values: $columnValues
       ) {
@@ -235,9 +302,8 @@ export async function criarVacinacao(payload: CreateItemPayload): Promise<string
   `
 
   const data = await mondayGQL<{ create_item: { id: string } }>(mutation, {
-    boardId: BOARD_DESTINO,
-    groupId: groupId,
-    itemName: payload.colaboradorName, 
+    boardId: boardId,
+    itemName: payload.colaboradorName,
     columnValues: JSON.stringify(columnValues),
   })
 
@@ -246,38 +312,49 @@ export async function criarVacinacao(payload: CreateItemPayload): Promise<string
 
 // ─── Board 2: Atualizar Vacinação Existente (Edição Rápida) ────────────────────
 
-interface UpdateVacinacaoPayload {
-  itemId: string
-  area: string
-  statusH1N1: string
-  status1Dose: string
-  status2Dose: string
-}
-
-export async function atualizarVacinacao(payload: UpdateVacinacaoPayload): Promise<void> {
-  const columnValues = {
-    // Usando os IDs reais confirmados
-    'color_mm27z9q9': { label: payload.area },
-    'color_mm27vwvb': { label: payload.statusH1N1 },
-    'color_mm275ygv': { label: payload.status1Dose },
-    'color_mm27ya8f': { label: payload.status2Dose },
+export async function atualizarVacinacao(
+  boardId: string, 
+  itemId: string, 
+  isADM: boolean,
+  dados: any
+): Promise<void> {
+  const columnValues: Record<string, unknown> = {
+    // Vacinas (IDs Reais mantidos para não quebrar a integração)
+    'color_mm29hmf8': { label: dados.statusH1N1 },
+    'color_mm29tzqy': { label: dados.statusHerpesZoster },
+    'color_mm28nke8': { label: dados.statusPneumococica },
+    'color_mm28cy7n': { label: dados.statusInfluenza },
+    'color_mm28crnh': { label: dados.statusFebreAmarela },
+    'color_mm28mr83': { label: dados.statusTripliceViral },
+    'color_mm287sya': { label: dados.statusDuplaAdulta },
+    'color_mm28vybv': { label: dados.statusHepatiteB },
+    
+    // Área
+    'color_mm27z9q9': { label: dados.area },
   }
 
+  // Diferenciação de colunas entre ADM e PONTA (Cargo/Setor/Unidade)
+  if (isADM) {
+    columnValues['text_mm29scra'] = dados.cargo // No ADM, cargo é texto
+    columnValues['text_mm29c7sc'] = dados.contrato // No ADM, 'contrato' é o Setor
+  } else {
+    columnValues['color_mm28bfj4'] = { label: dados.cargo } // Na Ponta, cargo é status/color
+    columnValues['text_mm278rts'] = dados.contrato // Na Ponta, é Contrato
+    columnValues['text_mm27t2ky'] = dados.unidade  // Na Ponta, atualiza a Unidade
+  }
+
+  // Mutação combinada: Atualiza colunas e o Nome do item
   const mutation = `
-    mutation UpdateItem($boardId: ID!, $itemId: ID!, $columnValues: JSON!) {
-      change_multiple_column_values(
-        board_id: $boardId
-        item_id: $itemId
-        column_values: $columnValues
-      ) {
-        id
-      }
+    mutation UpdateItem($boardId: ID!, $itemId: ID!, $itemName: JSON!, $columnValues: JSON!) {
+      change_multiple_column_values(board_id: $boardId, item_id: $itemId, column_values: $columnValues, create_labels_if_missing: true) { id }
+      n: change_column_value(board_id: $boardId, item_id: $itemId, column_id: "name", value: $itemName) { id }
     }
   `
 
   await mondayGQL(mutation, {
-    boardId: BOARD_DESTINO,
-    itemId: payload.itemId,
+    boardId: boardId,
+    itemId: itemId,
+    itemName: JSON.stringify(dados.colaboradorName),
     columnValues: JSON.stringify(columnValues),
   })
 }
